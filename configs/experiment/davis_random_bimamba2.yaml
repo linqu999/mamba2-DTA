@@ -1,0 +1,11 @@
+run_name: davis_random_bimamba2
+dataset: davis
+split: random
+model: mtdta_bimamba2_protein
+seed: 42
+device: cuda
+epochs: 100
+batch_size: 16
+learning_rate: 0.0001
+max_smiles_len: 100
+max_fasta_len: 4096

@@ -1,0 +1,8 @@
+model_name: mtdta_cnn
+drug_encoder: mambatransdta_smiles
+protein_encoder: cnn
+max_smiles_len: 100
+max_fasta_len: 1000
+drug_dim: 100
+protein_dim: 96
+fusion_dim: 196

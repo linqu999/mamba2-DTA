@@ -1,0 +1,11 @@
+dataset: davis
+raw_dir: data/raw/davis
+processed_path: data/processed/davis.csv
+splits_dir: data/splits/davis
+schema:
+  - drug_id
+  - target_id
+  - smiles
+  - protein_sequence
+  - affinity
+  - dataset

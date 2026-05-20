@@ -1,0 +1,21 @@
+run_name: debug_cpu
+dataset: davis
+split: official-deepdta
+split_path: data/splits/davis/official_deepdta.csv
+model: mtdta_cnn
+seed: 42
+device: cpu
+epochs: 1
+limit_batches: 2
+batch_size: 4
+learning_rate: 0.0001
+max_smiles_len: 100
+max_fasta_len: 128
+smiles_d_model: 32
+smiles_layers: 1
+smiles_nhead: 4
+protein_embed_dim: 16
+protein_num_filters: 8
+regressor_hidden_dims:
+  - 64
+  - 32

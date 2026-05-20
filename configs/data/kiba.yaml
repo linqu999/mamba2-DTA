@@ -1,0 +1,11 @@
+dataset: kiba
+raw_dir: data/raw/kiba
+processed_path: data/processed/kiba.csv
+splits_dir: data/splits/kiba
+schema:
+  - drug_id
+  - target_id
+  - smiles
+  - protein_sequence
+  - affinity
+  - dataset

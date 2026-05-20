@@ -1,0 +1,7 @@
+model_name: mtdta_unimamba2_protein
+drug_encoder: mambatransdta_smiles
+protein_encoder: unimamba2
+max_smiles_len: 100
+max_fasta_len: 4096
+protein_dim: 96
+pooling: mean_max

@@ -1,0 +1,6 @@
+model_name: mtdta_transformer_protein
+drug_encoder: mambatransdta_smiles
+protein_encoder: transformer
+max_smiles_len: 100
+max_fasta_len: 1000
+protein_dim: 96
