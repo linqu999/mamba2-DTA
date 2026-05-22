@@ -35,14 +35,14 @@ curl -L --retry 5 --retry-delay 5 --connect-timeout 60 \
 python scripts/download_deepdta_data.py --from-zip data/cache/DeepDTA-master.zip
 ```
 
-Then process datasets and splits:
+Then process datasets and the paper-aligned MambaTransDTA Table 1 splits:
 
 ```bash
 python scripts/01_prepare_data.py --deepdta-raw-dir data/raw/deepdta/davis --dataset davis --output data/processed/davis.csv --metadata data/processed/davis_metadata.json
 python scripts/01_prepare_data.py --deepdta-raw-dir data/raw/deepdta/kiba --dataset kiba --output data/processed/kiba.csv --metadata data/processed/kiba_metadata.json
 
-python scripts/02_make_splits.py --input data/processed/davis.csv --output data/splits/davis/official_deepdta.csv --metadata data/splits/davis/official_deepdta_metadata.json --split official-deepdta --folds-dir data/raw/deepdta/davis/folds --valid-fold 0
-python scripts/02_make_splits.py --input data/processed/kiba.csv --output data/splits/kiba/official_deepdta.csv --metadata data/splits/kiba/official_deepdta_metadata.json --split official-deepdta --folds-dir data/raw/deepdta/kiba/folds --valid-fold 0
+python scripts/02_make_splits.py --input data/processed/davis.csv --output data/splits/davis/mambatransdta_table1.csv --metadata data/splits/davis/mambatransdta_table1_metadata.json --split mambatransdta-table1 --folds-dir data/raw/deepdta/davis/folds
+python scripts/02_make_splits.py --input data/processed/kiba.csv --output data/splits/kiba/mambatransdta_table1.csv --metadata data/splits/kiba/mambatransdta_table1_metadata.json --split mambatransdta-table1 --folds-dir data/raw/deepdta/kiba/folds
 ```
 
 ### Option B: Upload The Whole Project Folder
@@ -55,7 +55,7 @@ Expected key files after upload:
 ```bash
 ls data/raw/deepdta/manifest.json
 ls data/processed/davis.csv data/processed/kiba.csv
-ls data/splits/davis/official_deepdta.csv data/splits/kiba/official_deepdta.csv
+ls data/splits/davis/mambatransdta_table1.csv data/splits/kiba/mambatransdta_table1.csv
 ```
 
 ### Gate 1 Acceptance
@@ -76,6 +76,31 @@ Expected:
 ```text
 davis 30056 68 442 2549
 kiba 118254 2111 229 4128
+```
+
+Then verify the paper-aligned split counts:
+
+```bash
+python - <<'PY'
+import pandas as pd
+for ds in ["davis", "kiba"]:
+    df = pd.read_csv(f"data/splits/{ds}/mambatransdta_table1.csv")
+    print(ds)
+    print(df["split"].value_counts().sort_index())
+PY
+```
+
+Expected:
+
+```text
+davis
+test      5010
+train    20037
+valid     5009
+kiba
+test     19709
+train    78836
+valid    19709
 ```
 
 ## Gate 2: Environment And Tests
@@ -134,6 +159,7 @@ Inspect required artifacts:
 ```bash
 RUN_DIR=$(ls -td runs/* | head -1)
 ls "$RUN_DIR"/metrics.json "$RUN_DIR"/metrics.csv "$RUN_DIR"/predictions_valid.csv "$RUN_DIR"/best.pt "$RUN_DIR"/train.log "$RUN_DIR"/environment.txt "$RUN_DIR"/command.txt
+ls "$RUN_DIR"/predictions_test.csv "$RUN_DIR"/git_commit.txt
 cat "$RUN_DIR"/metrics.json
 head "$RUN_DIR"/predictions_valid.csv
 cat "$RUN_DIR"/train.log
@@ -146,9 +172,11 @@ The run directory must contain:
 - `metrics.json`
 - `metrics.csv`
 - `predictions_valid.csv`
+- `predictions_test.csv`
 - `best.pt`
 - `train.log`
 - `environment.txt`
+- `git_commit.txt`
 - `command.txt`
 
 The debug train does not need good metrics. It only needs finite loss and valid
@@ -158,10 +186,10 @@ prediction rows.
 
 Only after all three gates pass:
 
-1. Install Mamba dependencies.
-2. Run Mamba2 import/shape tests.
-3. Run `debug_gpu.yaml`.
-4. Start Davis CNN baseline training.
+1. Run `debug_gpu.yaml`.
+2. Start Davis CNN baseline training with the MambaTransDTA Table 1 split.
+3. Install Mamba dependencies.
+4. Run Mamba2 import/shape tests.
 
 Suggested Mamba install attempt:
 
@@ -172,5 +200,11 @@ python scripts/00_check_env.py
 pytest -q
 ```
 
-Do not start formal KIBA or full-length BiMamba2 training before the CNN debug
-run has produced all required artifacts.
+Do not start formal KIBA or full-length BiMamba2 training before the Davis CNN
+baseline has been run and inspected.
+
+Davis CNN baseline entrypoint:
+
+```bash
+python scripts/03_train.py --config configs/experiment/davis_mambatransdta_table1_cnn_baseline.yaml
+```

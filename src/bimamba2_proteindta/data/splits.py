@@ -238,3 +238,13 @@ def make_official_deepdta_split_table(table, folds_dir: str | Path, *, valid_fol
     result.loc[list(valid_indices), "split"] = "valid"
     result.loc[list(test_indices), "split"] = "test"
     return result
+
+
+def recommended_mambatransdta_valid_fold(dataset: str) -> int:
+    """Return the DeepDTA validation fold that matches MambaTransDTA Table 1 counts."""
+    normalized = dataset.lower()
+    if normalized == "davis":
+        return 1
+    if normalized == "kiba":
+        return 0
+    raise ValueError(f"No MambaTransDTA Table 1 fold recommendation for dataset={dataset!r}")

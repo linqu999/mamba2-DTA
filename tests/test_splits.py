@@ -6,6 +6,7 @@ from bimamba2_proteindta.data.splits import (
     assert_no_leakage,
     make_official_deepdta_split_table,
     make_split_table,
+    recommended_mambatransdta_valid_fold,
     summarize_split,
     write_split,
 )
@@ -104,3 +105,8 @@ def test_make_official_deepdta_split_table_uses_validation_fold(tmp_path) -> Non
         "test",
         "test",
     ]
+
+
+def test_mambatransdta_table1_fold_recommendations() -> None:
+    assert recommended_mambatransdta_valid_fold("davis") == 1
+    assert recommended_mambatransdta_valid_fold("kiba") == 0

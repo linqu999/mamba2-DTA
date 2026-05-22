@@ -55,23 +55,42 @@ These counts match the expected DeepDTA benchmark scale: Davis 68 drugs, 442
 targets, 30,056 interactions; KIBA 2,111 drugs, 229 targets, 118,254 observed
 interactions.
 
-## Splits Generated
+## Primary Paper-Aligned Splits
 
-Official DeepDTA setting1 split with fold 0 used as validation:
+For formal training and paper-level comparison, use the MambaTransDTA Table 1
+split files:
 
-- Davis: train 20,036 / valid 5,010 / test 5,010
-- KIBA: train 78,836 / valid 19,709 / test 19,709
+- `data/splits/davis/mambatransdta_table1.csv`
+- `data/splits/kiba/mambatransdta_table1.csv`
 
-Cold split files with seed 42:
+These splits are generated from the DeepDTA setting1 fold files with validation
+fold choices selected to match the counts reported in MambaTransDTA Table 1:
 
-- `data/splits/davis/cold_drug_seed42.csv`
-- `data/splits/davis/cold_target_seed42.csv`
-- `data/splits/kiba/cold_drug_seed42.csv`
-- `data/splits/kiba/cold_target_seed42.csv`
+- Davis: validation fold 1 -> train 20,037 / valid 5,009 / test 5,010.
+- KIBA: validation fold 0 -> train 78,836 / valid 19,709 / test 19,709.
 
-Leakage checks:
+Generate them with:
 
-- Davis cold-drug: train/valid/test drug overlaps are all 0.
-- Davis cold-target: train/valid/test target overlaps are all 0.
-- KIBA cold-drug: train/valid/test drug overlaps are all 0.
-- KIBA cold-target: train/valid/test target overlaps are all 0.
+```bash
+python scripts/02_make_splits.py --input data/processed/davis.csv --output data/splits/davis/mambatransdta_table1.csv --metadata data/splits/davis/mambatransdta_table1_metadata.json --split mambatransdta-table1 --folds-dir data/raw/deepdta/davis/folds
+
+python scripts/02_make_splits.py --input data/processed/kiba.csv --output data/splits/kiba/mambatransdta_table1.csv --metadata data/splits/kiba/mambatransdta_table1_metadata.json --split mambatransdta-table1 --folds-dir data/raw/deepdta/kiba/folds
+```
+
+Acceptance counts:
+
+| Dataset | Train | Valid | Test |
+| --- | ---: | ---: | ---: |
+| Davis | 20,037 | 5,009 | 5,010 |
+| KIBA | 78,836 | 19,709 | 19,709 |
+
+## Removed Development Splits
+
+Early smoke testing used a fold0 derivative named `official_deepdta.csv`.
+For Davis, that produced train 20,036 / valid 5,010 / test 5,010, which differs
+from MambaTransDTA Table 1 by one train/validation row. The file and its config
+references have been removed to avoid accidental use in formal runs.
+
+Cold-start split helpers remain in code, but generated cold split CSVs are not
+part of the current training workflow. They should be regenerated later only
+when the project reaches the cold-start evaluation stage.

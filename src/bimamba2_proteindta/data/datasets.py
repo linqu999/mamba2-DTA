@@ -67,14 +67,14 @@ class DTADataset:
 
 
 def default_split_path(dataset: str, split: str) -> Path:
-    if split == "official-deepdta":
-        filename = "official_deepdta.csv"
+    if split == "mambatransdta-table1":
+        filename = "mambatransdta_table1.csv"
     elif split == "cold-drug":
         filename = "cold_drug_seed42.csv"
     elif split == "cold-target":
         filename = "cold_target_seed42.csv"
     elif split == "random":
-        filename = "official_deepdta.csv"
+        filename = "mambatransdta_table1.csv"
     else:
         raise ValueError(f"Unsupported split name: {split}")
     return Path("data") / "splits" / dataset / filename
