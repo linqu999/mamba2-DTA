@@ -46,13 +46,14 @@ def main() -> int:
     split_path = resolve_split_path(config)
     train_dataset = DTADataset(split_path, split="train", limit_rows=config.get("limit_train_rows"))
     valid_dataset = DTADataset(split_path, split="valid", limit_rows=config.get("limit_valid_rows"))
+    test_dataset = DTADataset(split_path, split="test", limit_rows=config.get("limit_test_rows"))
     collator = DTACollator(
         max_smiles_len=int(config.get("max_smiles_len", 100)),
         max_fasta_len=int(config.get("max_fasta_len", 1000)),
     )
     model = build_model(config)
     run_dir = prepare_run_dir(config, args.config)
-    metrics = run_training(config, model, train_dataset, valid_dataset, collator, run_dir)
+    metrics = run_training(config, model, train_dataset, valid_dataset, collator, run_dir, test_dataset)
     print(json.dumps({"run_dir": str(run_dir), "metrics": metrics}, indent=2, ensure_ascii=False))
     return 0
 

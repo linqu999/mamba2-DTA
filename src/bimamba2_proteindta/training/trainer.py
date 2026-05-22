@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -42,7 +43,35 @@ def prepare_run_dir(config: dict, config_path: str | Path | None = None) -> Path
         (run_dir / "config_source.txt").write_text(str(config_path) + "\n", encoding="utf-8")
     (run_dir / "command.txt").write_text(" ".join(sys.argv) + "\n", encoding="utf-8")
     (run_dir / "environment.txt").write_text(environment_summary(), encoding="utf-8")
+    (run_dir / "git_commit.txt").write_text(git_summary(), encoding="utf-8")
     return run_dir
+
+
+def _git_output(args: list[str]) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return completed.stdout.strip()
+
+
+def git_summary() -> str:
+    try:
+        head = _git_output(["rev-parse", "HEAD"])
+        branch = _git_output(["rev-parse", "--abbrev-ref", "HEAD"])
+        status = _git_output(["status", "--short"])
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        return f"git=unavailable: {exc}\n"
+
+    lines = [f"commit={head}", f"branch={branch}", f"dirty={bool(status)}"]
+    if status:
+        lines.append("status:")
+        lines.extend(status.splitlines())
+    return "\n".join(lines) + "\n"
 
 
 def environment_summary() -> str:
@@ -149,6 +178,7 @@ def run_training(
     valid_dataset,
     collator,
     run_dir: Path,
+    test_dataset=None,
 ) -> dict:
     torch, nn, DataLoader = _require_torch()
     requested_device = config.get("device", "cpu")
@@ -171,6 +201,15 @@ def run_training(
         collate_fn=collator,
         num_workers=int(config.get("num_workers", 0)),
     )
+    test_loader = None
+    if test_dataset is not None:
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=int(config.get("batch_size", 32)),
+            shuffle=False,
+            collate_fn=collator,
+            num_workers=int(config.get("num_workers", 0)),
+        )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=float(config.get("learning_rate", 1e-4)))
     loss_fn = nn.MSELoss()
@@ -187,6 +226,8 @@ def run_training(
     log_path = run_dir / "train.log"
     append_train_log(log_path, f"device={device}")
     append_train_log(log_path, f"train_rows={len(train_dataset)} valid_rows={len(valid_dataset)}")
+    if test_dataset is not None:
+        append_train_log(log_path, f"test_rows={len(test_dataset)}")
     for epoch in range(1, epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device, limit_batches)
         valid_loss, valid_predictions = evaluate(model, valid_loader, loss_fn, device, limit_batches)
@@ -203,6 +244,23 @@ def run_training(
         [row["y_true"] for row in best_valid_predictions],
         [row["y_pred"] for row in best_valid_predictions],
     )
+    test_loss = None
+    test_metrics = None
+    if test_loader is not None:
+        best_path = run_dir / "best.pt"
+        if best_path.exists():
+            try:
+                state_dict = torch.load(best_path, map_location=device, weights_only=True)
+            except TypeError:
+                state_dict = torch.load(best_path, map_location=device)
+            model.load_state_dict(state_dict)
+        test_loss, test_predictions = evaluate(model, test_loader, loss_fn, device, limit_batches)
+        write_predictions(run_dir / "predictions_test.csv", test_predictions)
+        test_metrics = compute_regression_metrics(
+            [row["y_true"] for row in test_predictions],
+            [row["y_pred"] for row in test_predictions],
+        ).as_dict()
+
     metrics = {
         "train_loss": history[-1]["train_loss"],
         "valid_loss": history[-1]["valid_loss"],
@@ -214,6 +272,10 @@ def run_training(
         "valid_rows": len(valid_dataset),
         "limit_batches": limit_batches,
     }
+    if test_dataset is not None:
+        metrics["test_loss"] = test_loss
+        metrics["test"] = test_metrics
+        metrics["test_rows"] = len(test_dataset)
     write_metrics(run_dir / "metrics.json", metrics)
     with (run_dir / "metrics.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=["epoch", "train_loss", "valid_loss"])
