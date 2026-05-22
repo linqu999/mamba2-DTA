@@ -160,9 +160,17 @@ Items not confirmed from the main PDF text:
 - Random seed policy and number of repeated runs.
 - Exact official sequence truncation lengths.
 - Exact train/validation split file format used by the official repository.
+- Exact CNN filter count and kernel settings for the protein branch.
 
 The paper says dataset-specific hyperparameters are in Supporting Table S1.
 Those should be collected before formal reproduction.
+
+Repository configs named `*_cnn_paper_hparams.yaml` align the settings that are
+available from Table 2: learning rate 0.0005, batch size 512, dropout 0.1,
+attention heads 4, drug/protein representation dimensions 128, and 500 epochs.
+They remain paper-hyperparameter-aligned engineering baselines, not exact
+official MambaTransDTA reproductions, until the official source and Supporting
+Table S1 are inspected.
 
 ## Main Test Results From Paper Table 3
 
