@@ -43,7 +43,13 @@ SUMMARY_FIELDS = [
     "test_rm2",
     "has_best_pt",
     "has_predictions_valid",
+    "has_predictions_valid_best",
     "has_predictions_test",
+    "has_artifact_manifest",
+    "selection_metric",
+    "final_valid_mse",
+    "final_valid_ci",
+    "final_valid_rm2",
     "git_commit",
     "git_branch",
     "git_dirty",
@@ -88,8 +94,11 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
     path = Path(run_dir)
     config = _load_json(path / "config.json")
     metrics = _load_json(path / "metrics.json")
+    summary = _load_json(path / "metrics_summary.json")
     git = _parse_key_values(path / "git_commit.txt")
     env = _parse_key_values(path / "environment.txt")
+    best_valid = summary.get("best_valid", {}) if isinstance(summary.get("best_valid", {}), dict) else {}
+    final_valid = summary.get("final_valid", {}) if isinstance(summary.get("final_valid", {}), dict) else {}
 
     row: dict[str, Any] = {field: "" for field in SUMMARY_FIELDS}
     row.update(
@@ -115,11 +124,11 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
             "train_loss": metrics.get("train_loss", ""),
             "valid_loss": metrics.get("valid_loss", ""),
             "best_valid_loss": metrics.get("best_valid_loss", ""),
-            "valid_mse": _metric(metrics, "valid", "mse"),
-            "valid_rmse": _metric(metrics, "valid", "rmse"),
-            "valid_mae": _metric(metrics, "valid", "mae"),
-            "valid_ci": _metric(metrics, "valid", "ci"),
-            "valid_rm2": _metric(metrics, "valid", "rm2"),
+            "valid_mse": best_valid.get("mse", _metric(metrics, "valid", "mse")),
+            "valid_rmse": best_valid.get("rmse", _metric(metrics, "valid", "rmse")),
+            "valid_mae": best_valid.get("mae", _metric(metrics, "valid", "mae")),
+            "valid_ci": best_valid.get("ci", _metric(metrics, "valid", "ci")),
+            "valid_rm2": best_valid.get("rm2", _metric(metrics, "valid", "rm2")),
             "test_loss": metrics.get("test_loss", ""),
             "test_mse": _metric(metrics, "test", "mse"),
             "test_rmse": _metric(metrics, "test", "rmse"),
@@ -128,7 +137,13 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
             "test_rm2": _metric(metrics, "test", "rm2"),
             "has_best_pt": (path / "best.pt").exists(),
             "has_predictions_valid": (path / "predictions_valid.csv").exists(),
+            "has_predictions_valid_best": (path / "predictions_valid_best.csv").exists(),
             "has_predictions_test": (path / "predictions_test.csv").exists(),
+            "has_artifact_manifest": (path / "artifact_manifest.json").exists(),
+            "selection_metric": summary.get("selection_metric", ""),
+            "final_valid_mse": final_valid.get("mse", ""),
+            "final_valid_ci": final_valid.get("ci", ""),
+            "final_valid_rm2": final_valid.get("rm2", ""),
             "git_commit": git.get("commit", ""),
             "git_branch": git.get("branch", ""),
             "git_dirty": git.get("dirty", ""),

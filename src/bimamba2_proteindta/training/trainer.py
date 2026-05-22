@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import subprocess
 import sys
@@ -11,6 +12,19 @@ from pathlib import Path
 from typing import Iterable
 
 from bimamba2_proteindta.training.metrics import compute_regression_metrics
+
+
+EPOCH_METRIC_FIELDS = [
+    "epoch",
+    "train_loss",
+    "valid_loss",
+    "valid_mse",
+    "valid_rmse",
+    "valid_mae",
+    "valid_ci",
+    "valid_rm2",
+    "is_best",
+]
 
 
 def _require_torch():
@@ -166,9 +180,40 @@ def write_metrics(path: Path, metrics: dict) -> None:
     path.write_text(json.dumps(metrics, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def write_epoch_metrics(path: Path, history: list[dict]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=EPOCH_METRIC_FIELDS)
+        writer.writeheader()
+        writer.writerows(history)
+
+
 def append_train_log(path: Path, message: str) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(message.rstrip() + "\n")
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_artifact_manifest(run_dir: Path) -> None:
+    artifacts = []
+    for path in sorted(item for item in run_dir.iterdir() if item.is_file() and item.name != "artifact_manifest.json"):
+        artifacts.append(
+            {
+                "path": path.name,
+                "bytes": path.stat().st_size,
+                "sha256": _file_sha256(path),
+            }
+        )
+    (run_dir / "artifact_manifest.json").write_text(
+        json.dumps({"artifacts": artifacts}, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def run_training(
@@ -219,9 +264,10 @@ def run_training(
     limit_batches = config.get("limit_batches")
     limit_batches = int(limit_batches) if limit_batches is not None else None
 
-    history = []
+    history: list[dict] = []
     best_valid_loss = float("inf")
     best_valid_predictions: list[dict] = []
+    best_valid_metrics = None
     best_epoch = 0
     log_path = run_dir / "train.log"
     append_train_log(log_path, f"device={device}")
@@ -231,14 +277,65 @@ def run_training(
     for epoch in range(1, epochs + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device, limit_batches)
         valid_loss, valid_predictions = evaluate(model, valid_loader, loss_fn, device, limit_batches)
-        history.append({"epoch": epoch, "train_loss": train_loss, "valid_loss": valid_loss})
-        append_train_log(log_path, f"epoch={epoch} train_loss={train_loss:.8f} valid_loss={valid_loss:.8f}")
+        valid_metrics = compute_regression_metrics(
+            [row["y_true"] for row in valid_predictions],
+            [row["y_pred"] for row in valid_predictions],
+        ).as_dict()
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             best_epoch = epoch
             best_valid_predictions = valid_predictions
+            best_valid_metrics = valid_metrics
             torch.save(model.state_dict(), run_dir / "best.pt")
             write_predictions(run_dir / "predictions_valid.csv", best_valid_predictions)
+            is_best = True
+        else:
+            is_best = False
+
+        history.append(
+            {
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "valid_loss": valid_loss,
+                "valid_mse": valid_metrics["mse"],
+                "valid_rmse": valid_metrics["rmse"],
+                "valid_mae": valid_metrics["mae"],
+                "valid_ci": valid_metrics["ci"],
+                "valid_rm2": valid_metrics["rm2"],
+                "is_best": is_best,
+            }
+        )
+        write_epoch_metrics(run_dir / "metrics.csv", history)
+        append_train_log(
+            log_path,
+            (
+                f"epoch={epoch} train_loss={train_loss:.8f} valid_loss={valid_loss:.8f} "
+                f"valid_mse={valid_metrics['mse']:.8f} valid_ci={valid_metrics['ci']:.8f} "
+                f"valid_rm2={valid_metrics['rm2']:.8f} is_best={int(is_best)}"
+            ),
+        )
+    if best_valid_metrics is None:
+        raise ValueError("No validation metrics were computed")
+    write_predictions(run_dir / "predictions_valid_best.csv", best_valid_predictions)
+
+    metrics_summary = {
+        "selection_metric": "valid_loss",
+        "selection_mode": "min",
+        "best_epoch": best_epoch,
+        "best_valid_loss": best_valid_loss,
+        "best_valid": best_valid_metrics,
+        "final_epoch": history[-1]["epoch"],
+        "final_train_loss": history[-1]["train_loss"],
+        "final_valid_loss": history[-1]["valid_loss"],
+        "final_valid": {
+            "mse": history[-1]["valid_mse"],
+            "rmse": history[-1]["valid_rmse"],
+            "mae": history[-1]["valid_mae"],
+            "ci": history[-1]["valid_ci"],
+            "rm2": history[-1]["valid_rm2"],
+        },
+    }
+    write_metrics(run_dir / "metrics_summary.json", metrics_summary)
 
     metrics_obj = compute_regression_metrics(
         [row["y_true"] for row in best_valid_predictions],
@@ -277,8 +374,6 @@ def run_training(
         metrics["test"] = test_metrics
         metrics["test_rows"] = len(test_dataset)
     write_metrics(run_dir / "metrics.json", metrics)
-    with (run_dir / "metrics.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["epoch", "train_loss", "valid_loss"])
-        writer.writeheader()
-        writer.writerows(history)
+    write_epoch_metrics(run_dir / "metrics.csv", history)
+    write_artifact_manifest(run_dir)
     return metrics

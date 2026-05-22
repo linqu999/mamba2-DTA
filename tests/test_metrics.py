@@ -35,6 +35,26 @@ def test_concordance_index_ignores_equal_truth_pairs() -> None:
     assert concordance_index(y_true, y_pred) == pytest.approx(1.0)
 
 
+def test_concordance_index_matches_pairwise_definition() -> None:
+    y_true = [3.0, 1.0, 2.0, 4.0, 4.0]
+    y_pred = [2.0, 1.0, 2.0, 5.0, 3.0]
+    concordant = 0.0
+    comparable = 0
+    for i in range(len(y_true)):
+        for j in range(i + 1, len(y_true)):
+            true_diff = y_true[i] - y_true[j]
+            if true_diff == 0:
+                continue
+            pred_diff = y_pred[i] - y_pred[j]
+            comparable += 1
+            if pred_diff == 0:
+                concordant += 0.5
+            elif true_diff * pred_diff > 0:
+                concordant += 1.0
+
+    assert concordance_index(y_true, y_pred) == pytest.approx(concordant / comparable)
+
+
 def test_rm2_score_is_one_for_perfect_prediction() -> None:
     y_true = [1.0, 2.0, 3.0, 4.0]
     y_pred = [1.0, 2.0, 3.0, 4.0]

@@ -67,24 +67,57 @@ def concordance_index(y_true: NumberSeq, y_pred: NumberSeq) -> float:
     affinity are ignored because they carry no ordering information.
     """
     true_values, pred_values = _validate_pair(y_true, y_pred)
+    if len(true_values) < 2:
+        return 0.0
+
+    pred_ranks = {value: rank + 1 for rank, value in enumerate(sorted(set(pred_values)))}
+    tree = _FenwickTree(len(pred_ranks))
+    pairs = sorted(zip(true_values, pred_values), key=lambda item: item[0])
+
     concordant = 0.0
     comparable = 0
+    previous_count = 0
+    group_start = 0
+    while group_start < len(pairs):
+        group_end = group_start + 1
+        while group_end < len(pairs) and pairs[group_end][0] == pairs[group_start][0]:
+            group_end += 1
 
-    for i in range(len(true_values)):
-        for j in range(i + 1, len(true_values)):
-            true_diff = true_values[i] - true_values[j]
-            if true_diff == 0:
-                continue
-            pred_diff = pred_values[i] - pred_values[j]
-            comparable += 1
-            if pred_diff == 0:
-                concordant += 0.5
-            elif true_diff * pred_diff > 0:
-                concordant += 1.0
+        for _, pred in pairs[group_start:group_end]:
+            rank = pred_ranks[pred]
+            lower = tree.prefix_sum(rank - 1)
+            equal = tree.range_sum(rank, rank)
+            concordant += lower + 0.5 * equal
+            comparable += previous_count
+
+        for _, pred in pairs[group_start:group_end]:
+            tree.add(pred_ranks[pred], 1)
+            previous_count += 1
+        group_start = group_end
 
     if comparable == 0:
         return 0.0
     return concordant / comparable
+
+
+class _FenwickTree:
+    def __init__(self, size: int) -> None:
+        self.values = [0] * (size + 1)
+
+    def add(self, index: int, delta: int) -> None:
+        while index < len(self.values):
+            self.values[index] += delta
+            index += index & -index
+
+    def prefix_sum(self, index: int) -> int:
+        total = 0
+        while index > 0:
+            total += self.values[index]
+            index -= index & -index
+        return total
+
+    def range_sum(self, start: int, end: int) -> int:
+        return self.prefix_sum(end) - self.prefix_sum(start - 1)
 
 
 def _mean(values: list[float]) -> float:

@@ -159,7 +159,7 @@ Inspect required artifacts:
 ```bash
 RUN_DIR=$(ls -td runs/* | head -1)
 ls "$RUN_DIR"/metrics.json "$RUN_DIR"/metrics.csv "$RUN_DIR"/predictions_valid.csv "$RUN_DIR"/best.pt "$RUN_DIR"/train.log "$RUN_DIR"/environment.txt "$RUN_DIR"/command.txt
-ls "$RUN_DIR"/predictions_test.csv "$RUN_DIR"/git_commit.txt
+ls "$RUN_DIR"/metrics_summary.json "$RUN_DIR"/predictions_valid_best.csv "$RUN_DIR"/predictions_test.csv "$RUN_DIR"/git_commit.txt "$RUN_DIR"/artifact_manifest.json
 cat "$RUN_DIR"/metrics.json
 head "$RUN_DIR"/predictions_valid.csv
 cat "$RUN_DIR"/train.log
@@ -170,17 +170,35 @@ cat "$RUN_DIR"/train.log
 The run directory must contain:
 
 - `metrics.json`
+- `metrics_summary.json`
 - `metrics.csv`
 - `predictions_valid.csv`
+- `predictions_valid_best.csv`
 - `predictions_test.csv`
 - `best.pt`
 - `train.log`
 - `environment.txt`
 - `git_commit.txt`
 - `command.txt`
+- `artifact_manifest.json`
 
-The debug train does not need good metrics. It only needs finite loss and valid
+`metrics.csv` must include per-epoch validation metrics: `valid_mse`,
+`valid_rmse`, `valid_mae`, `valid_ci`, `valid_rm2`, and `is_best`. The debug
+train does not need good metrics. It only needs finite loss and valid
 prediction rows.
+
+## Formal Training Preflight
+
+Before launching any formal baseline or model comparison run:
+
+```bash
+python scripts/00_check_env.py
+pytest -q
+python scripts/03_train.py --config <CONFIG> --limit-batches 2
+```
+
+The smoke run must produce the full artifact set listed above. Only then launch
+the full run without `--limit-batches`.
 
 ## After The Three Gates
 
