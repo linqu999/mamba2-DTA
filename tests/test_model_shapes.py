@@ -134,16 +134,18 @@ def test_factory_builds_mamba2_models() -> None:
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mamba_ssm") is None, reason="mamba_ssm is not installed")
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="mamba_ssm kernels require CUDA for forward shape tests")
 def test_mamba2_protein_encoders_shape() -> None:
     from bimamba2_proteindta.models.protein_bimamba2 import ProteinBiMamba2Encoder
     from bimamba2_proteindta.models.protein_mamba2 import ProteinMamba2Encoder
 
+    device = torch.device("cuda")
     vocab_size = len(build_amino_acid_vocab())
-    input_ids = torch.randint(0, vocab_size, (2, 16))
-    attention_mask = torch.ones(2, 16, dtype=torch.bool)
+    input_ids = torch.randint(0, vocab_size, (2, 16), device=device)
+    attention_mask = torch.ones(2, 16, dtype=torch.bool, device=device)
 
-    uni = ProteinMamba2Encoder(vocab_size=vocab_size, d_model=16, num_layers=1, headdim=16, output_dim=96)
-    bi = ProteinBiMamba2Encoder(vocab_size=vocab_size, d_model=16, num_layers=1, headdim=16, output_dim=96)
+    uni = ProteinMamba2Encoder(vocab_size=vocab_size, d_model=16, num_layers=1, headdim=16, output_dim=96).to(device)
+    bi = ProteinBiMamba2Encoder(vocab_size=vocab_size, d_model=16, num_layers=1, headdim=16, output_dim=96).to(device)
 
     assert uni(input_ids, attention_mask).shape == (2, 96)
     assert bi(input_ids, attention_mask).shape == (2, 96)
