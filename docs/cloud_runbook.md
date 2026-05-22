@@ -267,3 +267,17 @@ Paper-hyperparameter-aligned Davis CNN baseline entrypoint:
 ```bash
 python scripts/03_train.py --config configs/experiment/davis_mambatransdta_table1_cnn_paper_hparams.yaml
 ```
+
+After `mamba_ssm` is installed, smoke-test the controlled protein-encoder
+matrix:
+
+```bash
+python scripts/run_experiment_matrix.py --matrix configs/experiment/matrix_davis_protein_encoders.txt --epochs 1 --limit-batches 2
+```
+
+Only launch the full matrix after every smoke run has
+`artifact_validation.ok=true`:
+
+```bash
+python scripts/run_experiment_matrix.py --matrix configs/experiment/matrix_davis_protein_encoders.txt
+```

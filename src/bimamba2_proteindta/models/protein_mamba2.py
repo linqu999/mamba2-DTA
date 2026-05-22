@@ -10,11 +10,22 @@ def _require_mamba2():
     try:
         from mamba_ssm import Mamba2
     except ImportError as exc:
-        raise RuntimeError(
-            "mamba_ssm is required for ProteinMamba2Encoder. Install mamba-ssm "
-            "in a CUDA-enabled PyTorch environment."
-        ) from exc
+        try:
+            from mamba_ssm.modules.mamba2 import Mamba2
+        except ImportError:
+            raise RuntimeError(
+                "mamba_ssm is required for ProteinMamba2Encoder. Install mamba-ssm "
+                "in a CUDA-enabled PyTorch environment."
+            ) from exc
     return Mamba2
+
+
+def make_mamba2_layer(Mamba2, d_model: int, d_state: int, d_conv: int, expand: int, headdim: int):
+    """Create a Mamba2 layer with explicit head dimension when supported."""
+    try:
+        return Mamba2(d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand, headdim=headdim)
+    except TypeError:
+        return Mamba2(d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand)
 
 
 class ProteinMamba2Encoder(NN.Module):
@@ -28,6 +39,7 @@ class ProteinMamba2Encoder(NN.Module):
         d_state: int = 64,
         d_conv: int = 4,
         expand: int = 2,
+        headdim: int = 64,
         output_dim: int = 96,
         pooling: str = "mean_max",
         padding_idx: int = 0,
@@ -38,7 +50,7 @@ class ProteinMamba2Encoder(NN.Module):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=padding_idx)
         self.layers = nn.ModuleList(
-            Mamba2(d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand)
+            make_mamba2_layer(Mamba2, d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand, headdim=headdim)
             for _ in range(num_layers)
         )
         self.norms = nn.ModuleList(nn.LayerNorm(d_model) for _ in range(num_layers))

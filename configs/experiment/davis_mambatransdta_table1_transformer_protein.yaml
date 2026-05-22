@@ -1,0 +1,26 @@
+run_name: davis_mambatransdta_table1_transformer_protein
+dataset: davis
+split: mambatransdta-table1
+split_path: data/splits/davis/mambatransdta_table1.csv
+model: mtdta_transformer_protein
+protein_encoder: transformer
+seed: 42
+device: cuda
+epochs: 500
+batch_size: 512
+learning_rate: 0.0005
+max_smiles_len: 100
+max_fasta_len: 1000
+drug_dim: 128
+protein_dim: 128
+smiles_d_model: 128
+smiles_layers: 2
+smiles_nhead: 4
+protein_d_model: 128
+protein_layers: 2
+protein_nhead: 4
+protein_dim_feedforward: 256
+regressor_hidden_dims:
+  - 1024
+  - 512
+dropout: 0.1

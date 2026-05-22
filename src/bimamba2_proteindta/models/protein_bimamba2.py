@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from bimamba2_proteindta.models.pooling import masked_pool
-from bimamba2_proteindta.models.protein_mamba2 import _require_mamba2
+from bimamba2_proteindta.models.protein_mamba2 import _require_mamba2, make_mamba2_layer
 from bimamba2_proteindta.models.torch_utils import NN, require_torch
 
 
@@ -33,6 +33,7 @@ class ProteinBiMamba2Encoder(NN.Module):
         d_state: int = 64,
         d_conv: int = 4,
         expand: int = 2,
+        headdim: int = 64,
         output_dim: int = 96,
         pooling: str = "mean_max",
         direction_fusion: str = "gated",
@@ -47,11 +48,11 @@ class ProteinBiMamba2Encoder(NN.Module):
 
         self.embedding = nn.Embedding(vocab_size, d_model, padding_idx=padding_idx)
         self.forward_layers = nn.ModuleList(
-            Mamba2(d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand)
+            make_mamba2_layer(Mamba2, d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand, headdim=headdim)
             for _ in range(num_layers)
         )
         self.backward_layers = nn.ModuleList(
-            Mamba2(d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand)
+            make_mamba2_layer(Mamba2, d_model=d_model, d_state=d_state, d_conv=d_conv, expand=expand, headdim=headdim)
             for _ in range(num_layers)
         )
         self.forward_norms = nn.ModuleList(nn.LayerNorm(d_model) for _ in range(num_layers))

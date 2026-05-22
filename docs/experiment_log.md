@@ -16,6 +16,18 @@ which align the available settings with MambaTransDTA Table 2: learning rate
 0.0005, batch size 512, dropout 0.1, attention heads 4, drug/protein
 representation dimensions 128, and 500 epochs.
 
+After the CNN baseline, the main controlled comparison should use configs that
+only change the protein encoder while keeping the split, SMILES branch,
+regressor, learning rate, batch size, and epoch count aligned:
+
+- `davis_mambatransdta_table1_transformer_protein.yaml`
+- `davis_mambatransdta_table1_unimamba2_protein.yaml`
+- `davis_mambatransdta_table1_bimamba2_protein.yaml`
+- matching KIBA configs with the same suffixes
+
+The MambaTransDTA paper numbers should be treated as external target baselines
+unless official code reproduction is completed.
+
 ## Formal Run Requirements
 
 Do not treat a run as publication-ready unless it contains:

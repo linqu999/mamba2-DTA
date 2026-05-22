@@ -1,0 +1,30 @@
+run_name: kiba_mambatransdta_table1_bimamba2_protein
+dataset: kiba
+split: mambatransdta-table1
+split_path: data/splits/kiba/mambatransdta_table1.csv
+model: mtdta_bimamba2_protein
+protein_encoder: bimamba2
+seed: 42
+device: cuda
+epochs: 500
+batch_size: 512
+learning_rate: 0.0005
+max_smiles_len: 100
+max_fasta_len: 1000
+drug_dim: 128
+protein_dim: 128
+smiles_d_model: 128
+smiles_layers: 2
+smiles_nhead: 4
+protein_d_model: 128
+protein_layers: 2
+protein_d_state: 64
+protein_d_conv: 4
+protein_expand: 2
+protein_headdim: 64
+protein_pooling: mean_max
+direction_fusion: gated
+regressor_hidden_dims:
+  - 1024
+  - 512
+dropout: 0.1
