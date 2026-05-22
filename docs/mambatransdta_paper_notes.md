@@ -137,6 +137,13 @@ The paper uses three main regression metrics:
 Our repository currently computes MSE, RMSE, MAE, CI, and rm2. MSE, CI, and
 rm2 are the paper-critical metrics.
 
+Implementation note: CI is computed with an exact sorting/counting algorithm
+rather than an explicit double loop over all sample pairs. The metric definition
+is unchanged: pairs with equal ground-truth affinity are ignored; correctly
+ordered prediction pairs receive full credit; tied predictions receive half
+credit. The faster implementation is needed so per-epoch validation CI can be
+recorded without making KIBA runs impractically slow.
+
 ## Experimental Setup From Paper Table 2
 
 Default MambaTransDTA hyperparameters reported in the paper:

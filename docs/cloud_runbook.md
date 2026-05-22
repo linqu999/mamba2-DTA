@@ -200,6 +200,20 @@ python scripts/03_train.py --config <CONFIG> --limit-batches 2
 The smoke run must produce the full artifact set listed above. Only then launch
 the full run without `--limit-batches`.
 
+To watch a running job:
+
+```bash
+python scripts/watch_run.py
+```
+
+Useful variants:
+
+```bash
+python scripts/watch_run.py --interval 5
+python scripts/watch_run.py --run-dir runs/<RUN_ID>
+python scripts/watch_run.py --no-gpu
+```
+
 ## After The Three Gates
 
 Only after all three gates pass:
