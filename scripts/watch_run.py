@@ -54,6 +54,15 @@ def latest_epoch_row(path: Path) -> dict:
     return rows[-1] if rows else {}
 
 
+def current_best_epoch_row(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    best_rows = [row for row in rows if str(row.get("is_best", "")).lower() in {"true", "1"}]
+    return best_rows[-1] if best_rows else {}
+
+
 def file_line(path: Path) -> str:
     if not path.exists():
         return f"missing {path.name}"
@@ -74,13 +83,37 @@ def nvidia_smi_head() -> str:
 def print_dashboard(run_dir: Path, tail: int, show_gpu: bool) -> None:
     summary = load_json(run_dir / "metrics_summary.json")
     metrics = load_json(run_dir / "metrics.json")
+    config = load_json(run_dir / "config.json")
+    validation = load_json(run_dir / "artifact_validation.json")
     latest = latest_epoch_row(run_dir / "metrics.csv")
+    current_best = current_best_epoch_row(run_dir / "metrics.csv")
 
     print(f"RUN_DIR={run_dir}")
     print()
+    if config:
+        print(
+            "config: "
+            f"run_name={config.get('run_name', '')} "
+            f"dataset={config.get('dataset', '')} "
+            f"split={config.get('split', '')} "
+            f"epochs={config.get('epochs', '')} "
+            f"batch_size={config.get('batch_size', '')} "
+            f"lr={config.get('learning_rate', '')}"
+        )
     if latest:
         fields = ["epoch", "train_loss", "valid_mse", "valid_ci", "valid_rm2", "is_best"]
-        print("latest: " + " ".join(f"{key}={latest.get(key, '')}" for key in fields))
+        epoch = latest.get("epoch", "")
+        epochs = config.get("epochs", "") if config else ""
+        progress = f"{epoch}/{epochs}" if epochs else epoch
+        print(f"latest_epoch={progress}: " + " ".join(f"{key}={latest.get(key, '')}" for key in fields))
+    if current_best and not summary:
+        print(
+            "current_best: "
+            f"epoch={current_best.get('epoch')} "
+            f"valid_mse={current_best.get('valid_mse')} "
+            f"valid_ci={current_best.get('valid_ci')} "
+            f"valid_rm2={current_best.get('valid_rm2')}"
+        )
     if summary:
         best = summary.get("best_valid", {})
         print(
@@ -98,6 +131,13 @@ def print_dashboard(run_dir: Path, tail: int, show_gpu: bool) -> None:
             f"valid_mse={valid.get('mse')} "
             f"valid_ci={valid.get('ci')} "
             f"valid_rm2={valid.get('rm2')}"
+        )
+    if validation:
+        print(
+            "artifact_validation: "
+            f"ok={validation.get('ok')} "
+            f"errors={len(validation.get('errors', []))} "
+            f"warnings={len(validation.get('warnings', []))}"
         )
 
     print()

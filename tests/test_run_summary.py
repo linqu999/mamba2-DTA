@@ -60,6 +60,7 @@ def make_run(tmp_path):
     (run_dir / "predictions_valid_best.csv").write_text("y_true,y_pred\n", encoding="utf-8")
     (run_dir / "predictions_test.csv").write_text("y_true,y_pred\n", encoding="utf-8")
     (run_dir / "artifact_manifest.json").write_text('{"artifacts": []}\n', encoding="utf-8")
+    (run_dir / "artifact_validation.json").write_text('{"ok": true, "errors": []}\n', encoding="utf-8")
     return run_dir
 
 
@@ -79,6 +80,8 @@ def test_summarize_run_flattens_metrics(tmp_path) -> None:
     assert row["selection_metric"] == "valid_loss"
     assert row["has_predictions_test"] is True
     assert row["has_artifact_manifest"] is True
+    assert row["has_artifact_validation"] is True
+    assert row["artifact_validation_ok"] is True
 
 
 def test_collect_and_write_summary(tmp_path) -> None:

@@ -1,7 +1,9 @@
 # Experiment Log
 
-Use `python scripts/summarize_runs.py` to generate the machine-readable summary
-under `results/tables/`. This file records human decisions and interpretation.
+`scripts/03_train.py` now refreshes the machine-readable summary under
+`results/tables/` automatically after each finished run. Use
+`python scripts/summarize_runs.py` only when you want to rebuild the summary
+manually. This file records human decisions and interpretation.
 
 | run_id | dataset | split | model | seed | status | key result | notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -28,7 +30,18 @@ Do not treat a run as publication-ready unless it contains:
 - `predictions_valid.csv`, `predictions_valid_best.csv`, and
   `predictions_test.csv`.
 - `artifact_manifest.json`.
+- `artifact_validation.json` with `"ok": true`.
 
 Validation metrics are used for model selection. Test metrics are calculated
 only once from the best validation checkpoint and should not be used for
 hyperparameter tuning.
+
+Before launching a long formal run, execute a one-epoch smoke pass with the
+same config:
+
+```bash
+python scripts/03_train.py --config <CONFIG> --epochs 1 --limit-batches 2
+```
+
+Only start the full run when the smoke pass exits successfully and
+`artifact_validation.ok` is `true`.

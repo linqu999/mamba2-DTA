@@ -46,6 +46,9 @@ SUMMARY_FIELDS = [
     "has_predictions_valid_best",
     "has_predictions_test",
     "has_artifact_manifest",
+    "has_artifact_validation",
+    "artifact_validation_ok",
+    "artifact_validation_errors",
     "selection_metric",
     "final_valid_mse",
     "final_valid_ci",
@@ -95,6 +98,7 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
     config = _load_json(path / "config.json")
     metrics = _load_json(path / "metrics.json")
     summary = _load_json(path / "metrics_summary.json")
+    artifact_validation = _load_json(path / "artifact_validation.json")
     git = _parse_key_values(path / "git_commit.txt")
     env = _parse_key_values(path / "environment.txt")
     best_valid = summary.get("best_valid", {}) if isinstance(summary.get("best_valid", {}), dict) else {}
@@ -140,6 +144,9 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
             "has_predictions_valid_best": (path / "predictions_valid_best.csv").exists(),
             "has_predictions_test": (path / "predictions_test.csv").exists(),
             "has_artifact_manifest": (path / "artifact_manifest.json").exists(),
+            "has_artifact_validation": (path / "artifact_validation.json").exists(),
+            "artifact_validation_ok": artifact_validation.get("ok", ""),
+            "artifact_validation_errors": "; ".join(artifact_validation.get("errors", [])),
             "selection_metric": summary.get("selection_metric", ""),
             "final_valid_mse": final_valid.get("mse", ""),
             "final_valid_ci": final_valid.get("ci", ""),

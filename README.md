@@ -71,6 +71,16 @@ Debug training command once PyTorch is installed:
 python scripts/03_train.py --config configs/experiment/debug_cpu.yaml --limit-batches 2
 ```
 
+For a formal config preflight, override both epoch count and batch count so the
+smoke pass stays short:
+
+```bash
+python scripts/03_train.py --config configs/experiment/davis_mambatransdta_table1_cnn_paper_hparams.yaml --epochs 1 --limit-batches 2
+```
+
+Finished runs are automatically checked with `artifact_validation.json` and
+summarized under `results/tables/run_summary.csv`.
+
 ## Main Workflow
 
 1. Clone the official MambaTransDTA repository into `external/MambaTransDTA/`.
@@ -88,16 +98,21 @@ Each training run should eventually save:
 
 ```text
 runs/{run_id}/
-  config.yaml
-  metrics.json
-  metrics.csv
-  train.log
-  best.pt
-  predictions_valid.csv
-  predictions_test.csv
+  config.json
+  config_source.txt
+  command.txt
   environment.txt
   git_commit.txt
-  command.txt
+  train.log
+  metrics.json
+  metrics_summary.json
+  metrics.csv
+  best.pt
+  predictions_valid.csv
+  predictions_valid_best.csv
+  predictions_test.csv
+  artifact_manifest.json
+  artifact_validation.json
 ```
 
 ## Status

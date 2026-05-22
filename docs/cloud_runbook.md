@@ -159,8 +159,9 @@ Inspect required artifacts:
 ```bash
 RUN_DIR=$(ls -td runs/* | head -1)
 ls "$RUN_DIR"/metrics.json "$RUN_DIR"/metrics.csv "$RUN_DIR"/predictions_valid.csv "$RUN_DIR"/best.pt "$RUN_DIR"/train.log "$RUN_DIR"/environment.txt "$RUN_DIR"/command.txt
-ls "$RUN_DIR"/metrics_summary.json "$RUN_DIR"/predictions_valid_best.csv "$RUN_DIR"/predictions_test.csv "$RUN_DIR"/git_commit.txt "$RUN_DIR"/artifact_manifest.json
+ls "$RUN_DIR"/metrics_summary.json "$RUN_DIR"/predictions_valid_best.csv "$RUN_DIR"/predictions_test.csv "$RUN_DIR"/git_commit.txt "$RUN_DIR"/artifact_manifest.json "$RUN_DIR"/artifact_validation.json
 cat "$RUN_DIR"/metrics.json
+cat "$RUN_DIR"/artifact_validation.json
 head "$RUN_DIR"/predictions_valid.csv
 cat "$RUN_DIR"/train.log
 ```
@@ -181,11 +182,17 @@ The run directory must contain:
 - `git_commit.txt`
 - `command.txt`
 - `artifact_manifest.json`
+- `artifact_validation.json`
 
 `metrics.csv` must include per-epoch validation metrics: `valid_mse`,
 `valid_rmse`, `valid_mae`, `valid_ci`, `valid_rm2`, and `is_best`. The debug
 train does not need good metrics. It only needs finite loss and valid
 prediction rows.
+
+`scripts/03_train.py` automatically validates the run artifacts and refreshes
+`results/tables/run_summary.csv` and `results/tables/run_summary.json` after a
+run finishes. If the artifact validation fails, the training command exits with
+a non-zero status.
 
 ## Formal Training Preflight
 
@@ -194,7 +201,7 @@ Before launching any formal baseline or model comparison run:
 ```bash
 python scripts/00_check_env.py
 pytest -q
-python scripts/03_train.py --config <CONFIG> --limit-batches 2
+python scripts/03_train.py --config <CONFIG> --epochs 1 --limit-batches 2
 ```
 
 The smoke run must produce the full artifact set listed above. Only then launch
@@ -212,6 +219,20 @@ Useful variants:
 python scripts/watch_run.py --interval 5
 python scripts/watch_run.py --run-dir runs/<RUN_ID>
 python scripts/watch_run.py --no-gpu
+```
+
+To validate a finished run again:
+
+```bash
+python scripts/check_run_artifacts.py --latest --write-report
+python scripts/check_run_artifacts.py --run-dir runs/<RUN_ID> --write-report
+```
+
+To refresh the global run table manually:
+
+```bash
+python scripts/summarize_runs.py
+cat results/tables/run_summary.csv
 ```
 
 ## After The Three Gates
@@ -239,4 +260,10 @@ Davis CNN baseline entrypoint:
 
 ```bash
 python scripts/03_train.py --config configs/experiment/davis_mambatransdta_table1_cnn_baseline.yaml
+```
+
+Paper-hyperparameter-aligned Davis CNN baseline entrypoint:
+
+```bash
+python scripts/03_train.py --config configs/experiment/davis_mambatransdta_table1_cnn_paper_hparams.yaml
 ```
