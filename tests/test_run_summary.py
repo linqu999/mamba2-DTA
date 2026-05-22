@@ -1,10 +1,8 @@
 import json
-import sys
-
 from bimamba2_proteindta.evaluation.run_summary import collect_run_summaries, summarize_run, write_summary
 
 
-def make_run(tmp_path):
+def make_run(tmp_path, *, limit_batches=None):
     run_dir = tmp_path / "20260522_test_davis_table1_cnn_seed42"
     run_dir.mkdir()
     (run_dir / "config.json").write_text(
@@ -35,6 +33,7 @@ def make_run(tmp_path):
                 "train_rows": 20037,
                 "valid_rows": 5009,
                 "test_rows": 5010,
+                "limit_batches": limit_batches,
             }
         ),
         encoding="utf-8",
@@ -82,6 +81,17 @@ def test_summarize_run_flattens_metrics(tmp_path) -> None:
     assert row["has_artifact_manifest"] is True
     assert row["has_artifact_validation"] is True
     assert row["artifact_validation_ok"] is True
+    assert row["limit_batches"] == ""
+    assert row["publication_ready"] is True
+
+
+def test_summarize_run_marks_limited_smoke_runs_not_publication_ready(tmp_path) -> None:
+    run_dir = make_run(tmp_path, limit_batches=2)
+
+    row = summarize_run(run_dir)
+
+    assert row["limit_batches"] == 2
+    assert row["publication_ready"] is False
 
 
 def test_collect_and_write_summary(tmp_path) -> None:

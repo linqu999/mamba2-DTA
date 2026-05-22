@@ -26,6 +26,7 @@ SUMMARY_FIELDS = [
     "train_rows",
     "valid_rows",
     "test_rows",
+    "limit_batches",
     "best_epoch",
     "train_loss",
     "valid_loss",
@@ -49,6 +50,8 @@ SUMMARY_FIELDS = [
     "has_artifact_validation",
     "artifact_validation_ok",
     "artifact_validation_errors",
+    "artifact_validation_warnings",
+    "publication_ready",
     "selection_metric",
     "final_valid_mse",
     "final_valid_ci",
@@ -124,6 +127,7 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
             "train_rows": metrics.get("train_rows", ""),
             "valid_rows": metrics.get("valid_rows", ""),
             "test_rows": metrics.get("test_rows", ""),
+            "limit_batches": "" if metrics.get("limit_batches") is None else metrics.get("limit_batches"),
             "best_epoch": metrics.get("best_epoch", ""),
             "train_loss": metrics.get("train_loss", ""),
             "valid_loss": metrics.get("valid_loss", ""),
@@ -147,6 +151,7 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
             "has_artifact_validation": (path / "artifact_validation.json").exists(),
             "artifact_validation_ok": artifact_validation.get("ok", ""),
             "artifact_validation_errors": "; ".join(artifact_validation.get("errors", [])),
+            "artifact_validation_warnings": "; ".join(artifact_validation.get("warnings", [])),
             "selection_metric": summary.get("selection_metric", ""),
             "final_valid_mse": final_valid.get("mse", ""),
             "final_valid_ci": final_valid.get("ci", ""),
@@ -162,6 +167,12 @@ def summarize_run(run_dir: str | Path) -> dict[str, Any]:
             "config_source": _read_text(path / "config_source.txt"),
             "command": _read_text(path / "command.txt"),
         }
+    )
+    row["publication_ready"] = (
+        row["status"] == "complete"
+        and artifact_validation.get("ok") is True
+        and metrics.get("limit_batches") is None
+        and bool(metrics.get("test"))
     )
     return row
 
